@@ -17,7 +17,7 @@ client.on('messageCreate', (msg) => {
   if (msg.author.bot) return;
   
   // Vérifie les commandes de blagues en premier
-  const jokeResponse = handleJokeCommand(msg.content);
+  const jokeResponse = handleJokeCommand(msg.content, msg.guildId);
   if (jokeResponse) {
     msg.reply(jokeResponse);
     return;
