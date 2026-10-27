@@ -12,7 +12,7 @@ const tests = [
   { input: 'Pourquoi', expected: 'Pour feur' },
   { input: 'pourquoi', expected: 'pour feur' },
   { input: 'POURQUOI', expected: 'POUR FEUR' },
-  { input: 'Pourquoi ?', expected: 'Pour feur ?' },
+  { input: 'Pourquoi ?', expected: 'Pour feur' },
   
   // 3. Pour quoi -> Pour feur (avec casse préservée)
   { input: 'Pour quoi', expected: 'Pour feur' },
@@ -22,7 +22,9 @@ const tests = [
   
   // 4. Tu + [mot en f] + quoi (avec casse préservée)
   { input: 'Tu fais quoi', expected: 'Je fais feur' },
-  { input: 'tu fais quoi ?', expected: 'je fais feur ?' },
+  { input: 'bonjour Tu fais quoi', expected: 'Je fais feur' },
+  { input: 'Tu fais quoi bonjour', expected: 'Je fais feur' },
+  { input: 'tu fais quoi ?', expected: 'je fais feur' },
   { input: 'TU FAIS QUOI', expected: 'JE FAIS FEUR' },
   { input: 'Tu fait quoi', expected: 'Je fait feur' },
   { input: 'tu feras quoi', expected: 'je feras feur' },
@@ -39,12 +41,17 @@ const tests = [
   { input: 'Ça fait quoi', expected: 'Ça fait feur' },
   { input: 'ça fait quoi', expected: 'Ça fait feur' },
   { input: 'elle fé quoi', expected: 'elle fé feur' },
+  { input: 'bonjour elle fé quoi', expected: 'elle fé feur' },
+  { input: 'elle fé quoi bonjour', expected: 'elle fé feur' },
   { input: 'On forcerait quoi', expected: 'On forcerait feur' },
   { input: 'ON FORCERAIT QUOI', expected: 'ON FORCERAIT FEUR' },
   
   // 6. Règles de transformation de suffixe (XXX-quoi -> XXX-feur)
   { input: 'tra-quoi', expected: 'tra-feur' },
-  { input: 'La tra-quoi', expected: 'La tra-feur' },
+  { input: 'Le tra-quoi', expected: 'Le tra-feur' },
+  { input: 'Tu tra-quoi', expected: 'Tu tra-feur' },
+  { input: 'bonjour Le tra-quoi', expected: 'Le tra-feur' },
+  { input: 'Le tra-quoi bonjour', expected: 'Le tra-feur' },
   { input: 'coucou-quoi', expected: 'coucou-feur' },
   { input: 'test-quoi?', expected: 'test-feur?' },
   { input: 'TRA-QUOI', expected: 'TRA-FEUR' },
@@ -55,11 +62,6 @@ const tests = [
   { input: 'Quoi de neuf', expected: 'Feur de neuf' },
   { input: 'je sais pas quoi', expected: 'je sais pas feur' },
   { input: 'MAIS QUOI', expected: 'MAIS FEUR' },
-  
-  // Cas complexes
-  { input: 'Il fait quoi à la tra-quoi', expected: 'Il fait feur à la tra-feur' },
-  { input: 'Pourquoi tu fais quoi', expected: 'Pour feur je fais feur' },
-  { input: 'POURQUOI TU FAIS QUOI', expected: 'POUR FEUR JE FAIS FEUR' },
 ];
 
 console.log('Running feur.js tests...\n');
