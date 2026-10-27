@@ -1,88 +1,112 @@
 /**
  * Module de transformation "quoi" -> "feur"
  * Applique une série de règles pour transformer les messages contenant "quoi"
+ * 
+ * Règles appliquées dans l'ordre de priorité :
+ * 1. Règles spécifiques (pourquoi, pour quoi, tu + verbe en f, sujets + verbe en f)
+ * 2. Règles de suffixe (XXX-quoi)
+ * 3. Règle générale (remplacement simple de "quoi")
+ * 
+ * La règle générale ne s'applique QUE si aucune règle spécifique ne s'est appliquée.
  */
 
 /**
  * Helper pour préserver la casse lors du remplacement
- * @param {string} word - Le mot original (quoi, QUOI, Quoi, etc.)
- * @param {string} replacement - Le mot de remplacement en minuscules (feur)
+ * @param {string} original - Le texte original capturé
+ * @param {string} replacement - Le texte de remplacement en minuscules
  * @returns {string} - Le remplacement avec la bonne casse
  */
-function preserveCase(word, replacement) {
-  if (word === word.toUpperCase()) {
+function preserveCase(original, replacement) {
+  if (original === original.toUpperCase()) {
     return replacement.toUpperCase();
   }
-  if (word.charAt(0) === word.charAt(0).toUpperCase()) {
-    return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+  if (original.charAt(0) === original.charAt(0).toUpperCase()) {
+    return replacement.charAt(0).toUpperCase() + replacement.slice(1).toLowerCase();
   }
-  return replacement;
+  return replacement.toLowerCase();
 }
 
 /**
- * Règles de transformation, appliquées dans l'ordre
+ * Règles de transformation, appliquées dans l'ordre de priorité.
  * Chaque règle a :
- * - pattern: Regex pour matcher le message
- * - replace: Fonction qui reçoit le match et retourne le remplacement
+ * - pattern: Regex pour matcher le message (INSENSIBLE à la casse avec flag /i)
+ * - replace: Fonction qui reçoit le match et retourne le remplacement avec la CASSE PRÉSERVÉE
  */
 const rules = [
-  // 1. Règles spécifiques avec mots-clés avant "quoi"
+  // 1. Règles spécifiques avec mots-clés avant "quoi" (priorité la plus haute)
   {
-    name: 'pourquoi/pour quoi -> Pour feur',
-    pattern: /(Pourquoi|Pour\s+quoi|pourquoi|pour\s+quoi)/i,
+    name: 'pourquoi -> Pour feur',
+    pattern: /(pourquoi)/i,
     replace: (match) => {
-      const matched = match[0];
-      // Toujours retourner "Pour feur" avec espace
-      // Préserver la casse de "Pour"
-      if (matched.startsWith('P')) {
-        return 'Pour feur';
-      }
-      return 'pour feur';
+      return preserveCase(match[0], 'Pour feur');
     }
   },
   {
-    name: 'tu + [mot commençant par f] + quoi',
-    pattern: /(^|\s)(tu)\s+(f\S*)\s+quoi(\s|$|\?|!|\.)/i,
+    name: 'pour quoi -> Pour feur',
+    pattern: /(pour) (quoi)/i,
     replace: (match) => {
-      const verb = match[3];
-      const suffix = match[4];
-      return match[1] + `Je ${verb} feur` + suffix;
+      return preserveCase(match[1], 'Pour') + ' ' + preserveCase(match[2], 'feur');
     }
   },
   {
-    name: 'il/elle/on/ça/y + [mot commençant par f] + quoi',
-    pattern: /(^|\s)(il|elle|on|ça|y)\s+(f\S*)\s+quoi(\s|$|\?|!|\.)/i,
+    name: 'tu + [mot en f] + quoi',
+    pattern: /(^|\s)(tu)(\s+)(f\S*)(\s+)(quoi)(\s|$|\?|!|\.)/i,
     replace: (match) => {
+      const prefix = match[1];
+      const subject = match[2];
+      const space1 = match[3];
+      const verb = match[4];
+      const space2 = match[5];
+      const what = match[6];
+      const suffix = match[7];
+      
+      const newSubject = preserveCase(subject, 'Je');
+      const newWhat = preserveCase(what, 'feur');
+      
+      return prefix + newSubject + space1 + verb + space2 + newWhat + suffix;
+    }
+  },
+  {
+    name: 'il/elle/on/ça/y/iels/... + [mot en f] + quoi',
+    pattern: /(^|\s)(il|elle|on|ça|y|iels|iel|elles|ils)(\s+)(f\S*)(\s+)(quoi)(\s|$|\?|!|\.)/i,
+    replace: (match) => {
+      const prefix = match[1];
       let subject = match[2];
-      const verb = match[3];
-      const suffix = match[4];
-      // Normaliser les sujets spéciaux et préserver la casse du sujet original
-      const originalSubject = match[0].match(/(^|\s)(il|elle|on|ça|y)/i)[2];
-      if (originalSubject.toLowerCase() === 'y') subject = 'Il';
-      else if (originalSubject.toLowerCase() === 'ça') subject = 'Ça';
-      else if (originalSubject === originalSubject.toUpperCase()) {
-        subject = subject.toUpperCase();
-      } else if (originalSubject.charAt(0) === originalSubject.charAt(0).toUpperCase()) {
-        subject = subject.charAt(0).toUpperCase() + subject.slice(1);
-      } else {
-        subject = subject.charAt(0).toUpperCase() + subject.slice(1);
+      const space1 = match[3];
+      const verb = match[4];
+      const space2 = match[5];
+      const what = match[6];
+      const suffix = match[7];
+      
+      // Sujets spéciaux : toujours utiliser la forme standard
+      if (subject.toLowerCase() === 'y') {
+        subject = 'Il';
+      } else if (subject.toLowerCase() === 'ça') {
+        subject = 'Ça';
       }
-      return match[1] + `${subject} ${verb} feur` + suffix;
+      // Pour les autres sujets (il, elle, on, iels, iel, elles, ils), on les garde tels quels
+      
+      const newWhat = preserveCase(what, 'feur');
+      
+      return prefix + subject + space1 + verb + space2 + newWhat + suffix;
     }
   },
   
-  // 2. Règles de transformation de suffixe (XXX-quoi -> XXX-feur)
+  // 2. Règles de transformation de suffixe (priorité moyenne)
   {
     name: 'suffixe -quoi',
-    pattern: /([a-zA-Zàâäéèêëïîôùûüÿæœç\-]+)-quoi\b/i,
+    pattern: /([a-zA-Zàâäéèêëïîôùûüÿæœç\-]+)-(quoi)/i,
     replace: (match) => {
-      return match[1] + '-feur';
+      const prefix = match[1];
+      const what = match[2];
+      return prefix + '-' + preserveCase(what, 'feur');
     }
   },
   
-  // 3. Règle générale : remplacement simple de "quoi" avec préservation complète de la casse
+  // 3. Règle générale : remplacement simple de "quoi" (priorité la plus basse)
+  // NE S'APPLIQUE QUE si aucune autre règle ne s'est déclenchée
   {
-    name: 'remplacement simple avec casse',
+    name: 'remplacement simple',
     pattern: /\b(quoi)\b/i,
     replace: (match) => {
       return preserveCase(match[1], 'feur');
@@ -91,7 +115,10 @@ const rules = [
 ];
 
 /**
- * Applique toutes les règles de transformation à un message
+ * Applique toutes les règles de transformation à un message.
+ * Chaque règle ne s'applique qu'une fois (première occurrence).
+ * La règle générale ne s'applique QUE si aucune règle précédente ne s'est appliquée.
+ * 
  * @param {string} message - Le message à transformer
  * @returns {string|null} - Le message transformé, ou null si aucune règle ne s'applique
  */
@@ -103,24 +130,22 @@ function transformMessage(message) {
     const match = result.match(rule.pattern);
     if (match) {
       const replacement = rule.replace(match);
-      // On remplace seulement la première occurrence pour chaque règle
-      result = result.replace(rule.pattern, replacement);
+      // On remplace seulement la première occurrence pour cette règle
+      result = replacement;
       hasChanged = true;
-      // On continue pour appliquer d'autres règles potentiellement
+      // On continue pour appliquer d'autres règles sur le résultat
+      // (permet des transformations multiples comme "Il fait quoi à la tra-quoi")
     }
   }
 
-  // Si le message a été modifié et contient toujours "quoi" (cas des replacements partiels),
-  // on vérifie si on a tout remplacé
-  // Si aucune règle ne s'est appliquée, on retourne null
+  // La règle générale ne s'applique QUE si aucune règle ne s'est appliquée
   if (!hasChanged && /\bquoi\b/i.test(message)) {
-    // Cas simple : juste "quoi" quelque part
     return message.replace(/\b(quoi)\b/gi, (match) => {
       return preserveCase(match, 'feur');
     });
   }
 
-  // Si le message a été modifié, on retourne le résultat
+  // Si une règle s'est appliquée, on retourne le résultat
   if (hasChanged) {
     return result;
   }
