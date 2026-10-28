@@ -4,6 +4,7 @@ const configHandler = require('./src/configHandler.js');
 const jokesHandler = require('./src/jokesHandler.js');
 const helpHandler = require('./src/helpHandler.js');
 const feurHandler = require('./src/feurHandler.js');
+const handleHein = require('./hein.js');
 
 const client = new Client({
   intents: [
