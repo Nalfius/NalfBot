@@ -2,3 +2,4 @@
 node_modules/
 jokes-state.json
 .idea/
+config.json

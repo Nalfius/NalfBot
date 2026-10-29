@@ -10,6 +10,8 @@
  * La règle générale ne s'applique QUE si aucune règle spécifique ne s'est appliquée.
  */
 
+const { isEnabled } = require('./configHandler.js');
+
 /**
  * Helper pour préserver la casse lors du remplacement
  * @param {string} original - Le texte original capturé
@@ -231,7 +233,7 @@ function shouldRespond(message) {
  * @returns {boolean} - true si le message a été traité
  */
 function handle(msg) {
-  if (!shouldRespond(msg.content)) {
+  if (!isEnabled(msg.guildId, 'feur') || !shouldRespond(msg.content)) {
     return false;
   }
   const response = transformMessage(msg.content);

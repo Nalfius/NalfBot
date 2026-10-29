@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "node tests/feur.test.js && node tests/jokes.test.js",
+    "test": "node tests/feur.test.js && node tests/jokes.test.js && node tests/config.test.js && node tests/help.test.js",
+    "test:config": "node tests/config.test.js",
+    "test:help": "node tests/help.test.js",
     "test:feur": "node tests/feur.test.js",
     "test:jokes": "node tests/jokes.test.js"
   },

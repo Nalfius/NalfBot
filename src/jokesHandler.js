@@ -1,10 +1,12 @@
 /**
  * Module de blagues
- * Répond aux commandes !blague ou !joke avec une blague aléatoire
+ * Répond à la slash command /blague avec une blague aléatoire
  */
 
 const fs = require('fs');
 const path = require('path');
+const { SlashCommandBuilder, InteractionContextType, MessageFlags } = require('discord.js');
+const { isEnabled } = require('./configHandler.js');
 
 /**
  * Liste des blagues (vide pour l'instant)
@@ -68,16 +70,6 @@ function saveState() {
 loadState();
 
 /**
- * Vérifie si un message est une commande de blague
- * @param {string} message - Le message à vérifier
- * @returns {boolean} - true si le message est !blague ou !joke
- */
-function isJokeCommand(message) {
-  const trimmed = message.trim();
-  return trimmed === '!blague' || trimmed === '!joke';
-}
-
-/**
  * Retourne une blague aléatoire, en évitant la répétition consécutive par serveur
  * @param {string|null} guildId - Identifiant du serveur (optionnel)
  * @returns {string|null} - Une blague aléatoire ou null
@@ -126,38 +118,43 @@ function getRandomJoke(guildId = null) {
 }
 
 /**
- * Traite une commande de blague
- * @param {string} message - Le message à traiter
- * @param {string|null} guildId - Identifiant du serveur (optionnel)
- * @returns {string|null} - La blague ou null si pas de blague disponible
+ * Définition des slash commands du module
  */
-function handleJokeCommand(message, guildId = null) {
-  if (isJokeCommand(message)) {
-    return getRandomJoke(guildId);
-  }
-  return null;
-}
+const commands = [
+  new SlashCommandBuilder()
+    .setName('blague')
+    .setDescription('Raconte une blague')
+    .setContexts(InteractionContextType.Guild),
+];
 
 /**
- * Répond au message Discord s'il s'agit d'une commande de blague
- * @param {import('discord.js').Message} msg - Le message Discord
- * @returns {boolean} - true si le message a été traité
+ * Traite la slash command /blague
+ * @param {import('discord.js').ChatInputCommandInteraction} interaction - L'interaction Discord
+ * @returns {boolean} - true si l'interaction a été traitée
  */
-function handle(msg) {
-  const joke = handleJokeCommand(msg.content, msg.guildId);
-  if (!joke) {
+function handleCommand(interaction) {
+  if (interaction.commandName !== 'blague') {
     return false;
   }
-  msg.reply(joke);
+  // Discord exige une réponse à chaque interaction, même quand le module est désactivé
+  if (!isEnabled(interaction.guildId, 'jokes')) {
+    interaction.reply({ content: 'Le module jokes est désactivé sur ce serveur.', flags: MessageFlags.Ephemeral });
+    return true;
+  }
+  const joke = getRandomJoke(interaction.guildId);
+  if (!joke) {
+    interaction.reply({ content: 'Aucune blague disponible.', flags: MessageFlags.Ephemeral });
+    return true;
+  }
+  interaction.reply(joke);
   return true;
 }
 
 module.exports = {
-  handle,
+  commands,
+  handleCommand,
   jokes,
-  isJokeCommand,
   getRandomJoke,
-  handleJokeCommand,
   // Fonctions utilitaires pour la gestion de l'état (pour tests/debug)
   resetJokeState: () => {
     lastJokeIndexByGuild = {};
