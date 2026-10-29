@@ -6,8 +6,9 @@
   "scripts": {
     "start": "node index.js",
     "deploy": "node src/deployCommands.js",
-    "test": "node tests/feur.test.js && node tests/jokes.test.js && node tests/config.test.js && node tests/help.test.js",
+    "test": "node tests/feur.test.js && node tests/jokes.test.js && node tests/config.test.js && node tests/help.test.js && node tests/di.test.js",
     "test:config": "node tests/config.test.js",
+    "test:di": "node tests/di.test.js",
     "test:help": "node tests/help.test.js",
     "test:feur": "node tests/feur.test.js",
     "test:jokes": "node tests/jokes.test.js"

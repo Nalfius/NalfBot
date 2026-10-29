@@ -15,7 +15,7 @@ const {
 /**
  * Modules activables/désactivables
  */
-const MODULES = ['feur', 'jokes'];
+const MODULES = ['feur', 'jokes', 'di'];
 
 /**
  * Fichier de persistance de la configuration (non commité)

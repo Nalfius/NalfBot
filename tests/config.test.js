@@ -8,6 +8,7 @@ const originalConfig = fs.existsSync(CONFIG_FILE) ? fs.readFileSync(CONFIG_FILE,
 
 const { commands, handleCommand, isEnabled, setEnabled, getStatus } = require('../src/configHandler.js');
 const feurHandler = require('../src/feurHandler.js');
+const diHandler = require('../src/diHandler.js');
 
 let passed = 0;
 let failed = 0;
@@ -65,6 +66,9 @@ check('feur désactivé : pas de réponse à "quoi"', feurHandler.handle(fakeMes
 handleCommand(fakeInteraction('module', { nom: 'feur', etat: 'on' }));
 check('/module feur on réactive feur', isEnabled(guildId, 'feur') === true);
 check('feur réactivé : répond à "quoi"', feurHandler.handle(fakeMessage('quoi')) === true);
+check('di activé : répond à "divague"', diHandler.handle(fakeMessage('divague')) === true);
+handleCommand(fakeInteraction('module', { nom: 'di', etat: 'off' }));
+check('di désactivé : pas de réponse à "divague"', diHandler.handle(fakeMessage('divague')) === false);
 
 // /status
 setEnabled(guildId, 'jokes', false);

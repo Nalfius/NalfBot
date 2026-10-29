@@ -37,6 +37,7 @@ for (const name of ['blague', 'module', 'status', 'help']) {
   check(`/help liste /${name}`, help.includes(`/${name}\``), help);
 }
 check('/help mentionne feur', help.includes('feur'), help);
+check('/help mentionne di', help.includes('module di'), help);
 check('/module marqué admin', /`\/module`.*\(admin\)/.test(help), help);
 check('/blague non marqué admin', !/`\/blague`.*\(admin\)/.test(help), help);
 
@@ -47,6 +48,9 @@ check('jokes désactivé : les autres commandes restent', getHelp(guildId).inclu
 check('jokes désactivé : autre serveur non impacté', getHelp('autre-guild').includes('/blague'));
 setEnabled(guildId, 'feur', false);
 check('feur désactivé : mention de feur masquée', !getHelp(guildId).includes('feur'), getHelp(guildId));
+check('feur désactivé : mention de di conservée', getHelp(guildId).includes('module di'), getHelp(guildId));
+setEnabled(guildId, 'di', false);
+check('di désactivé : mention de di masquée', !getHelp(guildId).includes('module di'), getHelp(guildId));
 
 // /help
 const interaction = fakeInteraction('help');

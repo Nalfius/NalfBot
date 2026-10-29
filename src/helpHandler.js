@@ -38,6 +38,9 @@ function getHelp(guildId) {
   if (configHandler.isEnabled(guildId, 'feur')) {
     help += '\n\nLe bot répond aussi « feur » aux messages contenant « quoi » (module feur).';
   }
+  if (configHandler.isEnabled(guildId, 'di')) {
+    help += '\n\nLe bot répond aussi « vague » quand quelqu\'un dit « divague » (module di).';
+  }
   return help;
 }
 
