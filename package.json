@@ -4,9 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node test_feur.js && node test_jokes.js",
-    "test:feur": "node test_feur.js",
-    "test:jokes": "node test_jokes.js"
+    "start": "node index.js",
+    "test": "node tests/feur.test.js && node tests/jokes.test.js",
+    "test:feur": "node tests/feur.test.js",
+    "test:jokes": "node tests/jokes.test.js"
   },
   "repository": {
     "type": "git",

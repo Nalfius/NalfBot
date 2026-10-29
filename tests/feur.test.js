@@ -1,4 +1,4 @@
-const { transformMessage, shouldRespond } = require('./feur.js');
+const { transformMessage, shouldRespond } = require('../src/feurHandler.js');
 
 // Tests pour chaque règle
 const tests = [

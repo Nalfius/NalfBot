@@ -24,7 +24,6 @@ const jokes = [
   "Quel est le comble pour un électricien ?\nAvoir un coup de foudre",
   "Pourquoi Hulk a un beau jardin ?\nParce qu'il a la main verte.",
   "Où l'homme invisible part-il en vacances ?\nChez ces transparents.",
-  "Pourquoi les canards sont toujours à l'heure ?\nParce qu'ils sont dans l'étang.",
   "Quelle est l'expression préférée des vampires ?\nBon sang",
   "Quel est le comble pour un fantôme ?\nEtre dans de beaux draps.",
 ];
@@ -32,7 +31,7 @@ const jokes = [
 /**
  * Fichier de persistance pour l'état des blagues par serveur
  */
-const STATE_FILE = path.join(__dirname, 'jokes-state.json');
+const STATE_FILE = path.join(__dirname, '..', 'jokes-state.json');
 
 /**
  * État en mémoire: dernière blague envoyée par serveur (guildId -> index)
@@ -139,7 +138,22 @@ function handleJokeCommand(message, guildId = null) {
   return null;
 }
 
+/**
+ * Répond au message Discord s'il s'agit d'une commande de blague
+ * @param {import('discord.js').Message} msg - Le message Discord
+ * @returns {boolean} - true si le message a été traité
+ */
+function handle(msg) {
+  const joke = handleJokeCommand(msg.content, msg.guildId);
+  if (!joke) {
+    return false;
+  }
+  msg.reply(joke);
+  return true;
+}
+
 module.exports = {
+  handle,
   jokes,
   isJokeCommand,
   getRandomJoke,

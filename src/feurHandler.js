@@ -225,7 +225,25 @@ function shouldRespond(message) {
   return /\s*quoi\b/i.test(message);
 }
 
+/**
+ * Répond "feur" au message Discord s'il contient "quoi"
+ * @param {import('discord.js').Message} msg - Le message Discord
+ * @returns {boolean} - true si le message a été traité
+ */
+function handle(msg) {
+  if (!shouldRespond(msg.content)) {
+    return false;
+  }
+  const response = transformMessage(msg.content);
+  if (!response) {
+    return false;
+  }
+  msg.reply(response);
+  return true;
+}
+
 module.exports = {
+  handle,
   transformMessage,
   shouldRespond,
   rules,
