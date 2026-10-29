@@ -1,8 +1,12 @@
-.PHONY: start test
+.PHONY: start deploy test
 
 # Lance le bot
 start:
 	node index.js
+
+# Enregistre les slash commands auprès de Discord (à relancer quand une commande change)
+deploy:
+	node src/deployCommands.js
 
 # Lance tous les tests, ou un seul avec t=<nom> (ex : make test t=feur)
 test:
