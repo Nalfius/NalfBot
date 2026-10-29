@@ -4,8 +4,8 @@ const configHandler = require('./src/configHandler.js');
 const jokesHandler = require('./src/jokesHandler.js');
 const helpHandler = require('./src/helpHandler.js');
 const feurHandler = require('./src/feurHandler.js');
-const handleHein = require('./hein.js');
 const diHandler = require('./src/diHandler.js');
+const heinHandler = require('./src/heinHandler.js');
 
 const client = new Client({
   intents: [
@@ -17,12 +17,13 @@ const client = new Client({
 
 client.on('ready', () => console.log(`Connecté : ${client.user.tag}`));
 
-// Messages : réactions "feur" puis "di" (une seule réponse par message)
+// Messages : réactions "feur", "di" puis "hein" (une seule réponse par message)
 client.on('messageCreate', (msg) => {
   if (msg.author.bot) return;
 
   if (feurHandler.handle(msg)) return;
-  diHandler.handle(msg);
+  if (diHandler.handle(msg)) return;
+  heinHandler.handle(msg);
 });
 
 // Slash commands

@@ -9,6 +9,7 @@ const originalConfig = fs.existsSync(CONFIG_FILE) ? fs.readFileSync(CONFIG_FILE,
 const { commands, handleCommand, isEnabled, setEnabled, getStatus } = require('../src/configHandler.js');
 const feurHandler = require('../src/feurHandler.js');
 const diHandler = require('../src/diHandler.js');
+const heinHandler = require('../src/heinHandler.js');
 
 let passed = 0;
 let failed = 0;
@@ -69,6 +70,9 @@ check('feur réactivé : répond à "quoi"', feurHandler.handle(fakeMessage('quo
 check('di activé : répond à "divague"', diHandler.handle(fakeMessage('divague')) === true);
 handleCommand(fakeInteraction('module', { nom: 'di', etat: 'off' }));
 check('di désactivé : pas de réponse à "divague"', diHandler.handle(fakeMessage('divague')) === false);
+check('hein activé : répond à "hein"', heinHandler.handle(fakeMessage('hein')) === true);
+handleCommand(fakeInteraction('module', { nom: 'hein', etat: 'off' }));
+check('hein désactivé : pas de réponse à "hein"', heinHandler.handle(fakeMessage('hein')) === false);
 
 // /status
 setEnabled(guildId, 'jokes', false);

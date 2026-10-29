@@ -51,6 +51,9 @@ check('feur désactivé : mention de feur masquée', !getHelp(guildId).includes(
 check('feur désactivé : mention de di conservée', getHelp(guildId).includes('module di'), getHelp(guildId));
 setEnabled(guildId, 'di', false);
 check('di désactivé : mention de di masquée', !getHelp(guildId).includes('module di'), getHelp(guildId));
+check('di désactivé : mention de hein conservée', getHelp(guildId).includes('module hein'), getHelp(guildId));
+setEnabled(guildId, 'hein', false);
+check('hein désactivé : mention de hein masquée', !getHelp(guildId).includes('module hein'), getHelp(guildId));
 
 // /help
 const interaction = fakeInteraction('help');
