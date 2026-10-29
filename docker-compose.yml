@@ -1,0 +1,11 @@
+services:
+  bot-feur:
+    build: .
+    env_file: .env
+    restart: unless-stopped
+    volumes:
+      # Config des modules et état des blagues, conservés entre deux rebuilds
+      - nalfbot-data:/app/data
+
+volumes:
+  nalfbot-data:

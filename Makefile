@@ -1,4 +1,4 @@
-.PHONY: start deploy test
+.PHONY: start deploy test install build up down logs deploy-docker
 
 # Lance le bot
 start:
@@ -15,3 +15,29 @@ ifdef t
 else
 	@for f in tests/*.test.js; do echo "== $$f"; node $$f || exit 1; done
 endif
+
+# Installe l'environnement local
+install:
+	npm ci
+
+# --- Docker ---
+
+# Construit l'image du bot
+build:
+	docker compose build
+
+# (Re)construit l'image et lance le bot en arrière-plan
+up:
+	docker compose up -d --build
+
+# Arrête le bot (le volume de données est conservé)
+down:
+	docker compose down
+
+# Affiche les logs du bot en continu
+logs:
+	docker compose logs -f
+
+# Enregistre les slash commands depuis le conteneur (pas besoin de Node sur l'hôte)
+deploy-docker:
+	docker compose run --rm bot-feur node src/deployCommands.js

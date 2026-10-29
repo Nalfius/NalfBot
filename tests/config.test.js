@@ -3,7 +3,7 @@ const path = require('path');
 const { PermissionFlagsBits, MessageFlags } = require('discord.js');
 
 // Les tests écrivent dans config.json : on sauvegarde la config réelle pour la restaurer à la fin
-const CONFIG_FILE = path.join(__dirname, '..', 'config.json');
+const CONFIG_FILE = path.join(__dirname, '..', 'data', 'config.json');
 const originalConfig = fs.existsSync(CONFIG_FILE) ? fs.readFileSync(CONFIG_FILE, 'utf8') : null;
 
 const { commands, handleCommand, isEnabled, setEnabled, getStatus } = require('../src/configHandler.js');

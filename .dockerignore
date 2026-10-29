@@ -1,0 +1,16 @@
+# Secrets : injectés au lancement via env_file, jamais dans l'image
+.env
+.env.*
+
+# Installé par npm ci dans l'image
+node_modules
+
+# État d'exécution : fourni par le volume
+data
+config.json
+jokes-state.json
+
+# Inutile à l'exécution
+.git
+.idea
+tests

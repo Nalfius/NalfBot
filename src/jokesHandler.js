@@ -33,7 +33,7 @@ const jokes = [
 /**
  * Fichier de persistance pour l'état des blagues par serveur
  */
-const STATE_FILE = path.join(__dirname, '..', 'jokes-state.json');
+const STATE_FILE = path.join(__dirname, '..', 'data', 'jokes-state.json');
 
 /**
  * État en mémoire: dernière blague envoyée par serveur (guildId -> index)
@@ -60,6 +60,7 @@ function loadState() {
  */
 function saveState() {
   try {
+    fs.mkdirSync(path.dirname(STATE_FILE), { recursive: true });
     fs.writeFileSync(STATE_FILE, JSON.stringify(lastJokeIndexByGuild, null, 2));
   } catch (err) {
     console.error('[jokes] Erreur à la sauvegarde de l\'état:', err.message);

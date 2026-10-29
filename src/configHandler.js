@@ -18,9 +18,9 @@ const {
 const MODULES = ['feur', 'jokes', 'di', 'hein'];
 
 /**
- * Fichier de persistance de la configuration (non commité)
+ * Fichier de persistance de la configuration (non commité, dans data/ monté en volume Docker)
  */
-const CONFIG_FILE = path.join(__dirname, '..', 'config.json');
+const CONFIG_FILE = path.join(__dirname, '..', 'data', 'config.json');
 
 /**
  * Configuration en mémoire par serveur (guildId -> { module: boolean })
@@ -47,6 +47,7 @@ function loadConfig() {
  */
 function saveConfig() {
   try {
+    fs.mkdirSync(path.dirname(CONFIG_FILE), { recursive: true });
     fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
   } catch (err) {
     console.error('[config] Erreur à la sauvegarde de la config:', err.message);

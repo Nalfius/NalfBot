@@ -3,8 +3,8 @@ const path = require('path');
 
 // getRandomJoke(guildId) écrit dans jokes-state.json et /blague peut écrire dans config.json :
 // on sauvegarde les fichiers réels pour les restaurer à la fin
-const STATE_FILE = path.join(__dirname, '..', 'jokes-state.json');
-const CONFIG_FILE = path.join(__dirname, '..', 'config.json');
+const STATE_FILE = path.join(__dirname, '..', 'data', 'jokes-state.json');
+const CONFIG_FILE = path.join(__dirname, '..', 'data', 'config.json');
 const originals = [STATE_FILE, CONFIG_FILE].map((file) => [file, fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null]);
 
 const { handleCommand, getRandomJoke, jokes } = require('../src/jokesHandler.js');
