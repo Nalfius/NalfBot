@@ -13,6 +13,11 @@
 const { isEnabled } = require('./configHandler.js');
 
 /**
+ * Probabilité de répondre "coubeh" au lieu de "feur" (règle générale uniquement)
+ */
+const COUBEH_PROBABILITY = 1 / 20;
+
+/**
  * Helper pour préserver la casse lors du remplacement
  * @param {string} original - Le texte original capturé
  * @param {string} replacement - Le texte de remplacement en minuscules
@@ -106,6 +111,7 @@ const rules = [
   
   // 3. Règle générale : remplacement simple de "quoi" (priorité la plus basse)
   // NE S'APPLIQUE QUE si aucune autre règle ne s'est déclenchée
+  // Dans transformMessage, "feur" y est remplacé par "coubeh" avec une probabilité COUBEH_PROBABILITY
   {
     name: 'remplacement simple',
     pattern: /\b(quoi)\b/gi,
@@ -167,11 +173,12 @@ function applyRuleWithContext(result, rule, ruleIndex) {
  * Applique toutes les règles de transformation à un message.
  * Chaque règle ne s'applique qu'une fois (première occurrence).
  * La règle générale ne s'applique QUE si aucune règle précédente ne s'est appliquée.
- * 
+ *
  * @param {string} message - Le message à transformer
+ * @param {() => number} random - Source d'aléatoire dans [0, 1), injectable pour les tests
  * @returns {string|null} - Le message transformé, ou null si aucune règle ne s'applique
  */
-function transformMessage(message) {
+function transformMessage(message, random = Math.random) {
   let result = message;
   let hasChanged = false;
   let specificRuleMatched = false;
@@ -206,7 +213,9 @@ function transformMessage(message) {
     const hasMatch = generalRegex.test(result);
     
     if (hasMatch) {
-      result = result.replace(generalRegex, generalRule.replace);
+      // Un seul tirage par message : tous les "quoi" reçoivent le même mot
+      const word = random() < COUBEH_PROBABILITY ? 'coubeh' : 'feur';
+      result = result.replace(generalRegex, (match, p1) => preserveCase(p1, word));
       hasChanged = true;
     }
   }
@@ -247,6 +256,7 @@ function handle(msg) {
 module.exports = {
   handle,
   transformMessage,
+  COUBEH_PROBABILITY,
   shouldRespond,
   rules,
   preserveCase

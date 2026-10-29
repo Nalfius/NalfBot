@@ -1,4 +1,9 @@
-const { transformMessage, shouldRespond } = require('../src/feurHandler.js');
+const { transformMessage, shouldRespond, COUBEH_PROBABILITY } = require('../src/feurHandler.js');
+
+// Fausses sources d'aléatoire pour rendre les tests déterministes
+// Par défaut, les tests utilisent NEVER_COUBEH pour ne pas échouer 1 fois sur 20
+const ALWAYS_COUBEH = () => 0;
+const NEVER_COUBEH = () => 0.99;
 
 // Tests pour chaque règle
 const tests = [
@@ -62,6 +67,20 @@ const tests = [
   { input: 'Quoi de neuf', expected: 'Feur de neuf' },
   { input: 'je sais pas quoi', expected: 'je sais pas feur' },
   { input: 'MAIS QUOI', expected: 'MAIS FEUR' },
+
+  // 8. Coubeh : règle générale uniquement, quand le tirage tombe sous COUBEH_PROBABILITY
+  { input: 'quoi', random: ALWAYS_COUBEH, expected: 'coubeh' },
+  { input: 'Quoi ?', random: ALWAYS_COUBEH, expected: 'Coubeh ?' },
+  { input: 'QUOI', random: ALWAYS_COUBEH, expected: 'COUBEH' },
+  { input: 'c est quoi ce truc', random: ALWAYS_COUBEH, expected: 'c est coubeh ce truc' },
+  { input: 'quoi quoi', random: ALWAYS_COUBEH, expected: 'coubeh coubeh' },
+  // Limites du tirage : juste sous / pile sur la probabilité
+  { input: 'quoi', random: () => COUBEH_PROBABILITY - 0.001, expected: 'coubeh' },
+  { input: 'quoi', random: () => COUBEH_PROBABILITY, expected: 'feur' },
+  // Les règles spécifiques ne sont jamais concernées
+  { input: 'pourquoi', random: ALWAYS_COUBEH, expected: 'pour feur' },
+  { input: 'Tu fais quoi', random: ALWAYS_COUBEH, expected: 'Je fais feur' },
+  { input: 'coucou-quoi', random: ALWAYS_COUBEH, expected: 'coucou-feur' },
 ];
 
 console.log('Running feur.js tests...\n');
@@ -70,7 +89,7 @@ let passed = 0;
 let failed = 0;
 
 tests.forEach((test, index) => {
-  const result = transformMessage(test.input);
+  const result = transformMessage(test.input, test.random ?? NEVER_COUBEH);
   const success = result === test.expected;
   
   if (success) {
