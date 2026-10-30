@@ -28,6 +28,15 @@ client.on('messageCreate', (msg) => {
 
 // Slash commands
 client.on('interactionCreate', (interaction) => {
+  // Autocomplétion et formulaires : seul le module jokes en utilise
+  if (interaction.isAutocomplete()) {
+    jokesHandler.handleAutocomplete(interaction);
+    return;
+  }
+  if (interaction.isModalSubmit()) {
+    jokesHandler.handleModalSubmit(interaction);
+    return;
+  }
   if (!interaction.isChatInputCommand()) return;
 
   if (configHandler.handleCommand(interaction)) return;
