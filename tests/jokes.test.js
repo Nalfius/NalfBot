@@ -5,8 +5,15 @@ const { MessageFlags, PermissionFlagsBits } = require('discord.js');
 // Les tests écrivent dans data/ (état, listes de blagues, config) :
 // on sauvegarde les fichiers réels pour les restaurer à la fin
 const DATA_DIR = path.join(__dirname, '..', 'data');
+const JOKES_FILE = path.join(DATA_DIR, 'jokes.json');
 const FILES = ['jokes-state.json', 'jokes.json', 'config.json'].map((name) => path.join(DATA_DIR, name));
 const originals = FILES.map((file) => [file, fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null]);
+
+// Ancien format (simples textes) écrit avant le chargement du module, pour tester la conversion
+fs.mkdirSync(DATA_DIR, { recursive: true });
+fs.writeFileSync(JOKES_FILE, JSON.stringify({
+  'legacy-guild': ['Question ?\nRéponse', 'Une blague en un bloc'],
+}));
 
 const {
   commands,
@@ -18,6 +25,8 @@ const {
   removeJoke,
   getRandomJoke,
   getJokeChoices,
+  formatJoke,
+  toJoke,
   DEFAULT_JOKES,
 } = require('../src/jokesHandler.js');
 const { setEnabled } = require('../src/configHandler.js');
@@ -37,6 +46,7 @@ function check(name, condition, details = '') {
 
 /**
  * Fausse interaction Discord : enregistre les réponses, formulaires et choix d'autocomplétion
+ * Un champ de formulaire absent de `fields` lève une erreur, comme discord.js
  */
 function fakeInteraction({ commandName, subcommand, options = {}, focused = '', customId, fields = {} }, guildId = 'test-guild') {
   const interaction = {
@@ -51,7 +61,14 @@ function fakeInteraction({ commandName, subcommand, options = {}, focused = '', 
       getString: (name) => options[name] ?? null,
       getFocused: () => focused,
     },
-    fields: { getTextInputValue: (id) => fields[id] },
+    fields: {
+      getTextInputValue: (id) => {
+        if (!(id in fields)) {
+          throw new Error(`Champ ${id} introuvable`);
+        }
+        return fields[id];
+      },
+    },
   };
   interaction.reply = (response) => interaction.replies.push(response);
   interaction.showModal = (modal) => interaction.modals.push(modal.toJSON());
@@ -61,9 +78,26 @@ function fakeInteraction({ commandName, subcommand, options = {}, focused = '', 
 
 console.log('Running jokes tests...\n');
 
+// toJoke : conversion de l'ancien format
+check('toJoke : question + réponse séparées', JSON.stringify(toJoke('Pourquoi ?\nParce que.')) === '{"text":"Pourquoi ?","punchline":"Parce que."}');
+check('toJoke : réponse sur plusieurs lignes', toJoke('Quoi ?\nLigne 1\nLigne 2').punchline === 'Ligne 1\nLigne 2');
+check('toJoke : pas de "?" en fin de 1re ligne → un bloc', JSON.stringify(toJoke('Deux anges :\n"Nuageux"')) === '{"text":"Deux anges :\\n\\"Nuageux\\""}');
+check('toJoke : question sans réponse → un bloc', toJoke('Pourquoi ?').punchline === undefined);
+check('toJoke : blague déjà structurée inchangée', toJoke({ text: 'a', punchline: 'b' }).punchline === 'b');
+
+// formatJoke : chute en spoiler
+check('formatJoke : chute en spoiler', formatJoke({ text: 'Pourquoi ?', punchline: 'Parce que.' }) === 'Pourquoi ?\n||Parce que.||');
+check('formatJoke : sans chute, texte seul', formatJoke({ text: 'Un bloc' }) === 'Un bloc');
+
+// Conversion au chargement des listes à l'ancien format
+check('ancien format converti au chargement (question/réponse)', JSON.stringify(getJokes('legacy-guild')[0]) === '{"text":"Question ?","punchline":"Réponse"}', JSON.stringify(getJokes('legacy-guild')));
+check('ancien format converti au chargement (bloc)', JSON.stringify(getJokes('legacy-guild')[1]) === '{"text":"Une blague en un bloc"}');
+
 // Blagues par défaut
 check('les blagues par défaut ne sont pas vides', DEFAULT_JOKES.length > 0);
-const duplicates = DEFAULT_JOKES.filter((joke, i) => DEFAULT_JOKES.indexOf(joke) !== i);
+check('les blagues par défaut sont structurées', DEFAULT_JOKES.every((joke) => typeof joke.text === 'string' && joke.text.length > 0));
+const formatted = DEFAULT_JOKES.map(formatJoke);
+const duplicates = formatted.filter((joke, i) => formatted.indexOf(joke) !== i);
 check('aucune blague par défaut en double', duplicates.length === 0, JSON.stringify(duplicates));
 check('un serveur sans liste utilise les blagues par défaut', getJokes('serveur-neuf') === DEFAULT_JOKES);
 
@@ -85,7 +119,7 @@ check('pas de répétition consécutive sur un même serveur (100 tirages)', !re
 // /blague
 const blague = fakeInteraction({ commandName: 'blague' });
 check('/blague est traitée', handleCommand(blague) === true);
-check('/blague répond une blague publique', getJokes(guildId).includes(blague.replies[0]), JSON.stringify(blague.replies));
+check('/blague répond une blague mise en forme', getJokes(guildId).map(formatJoke).includes(blague.replies[0]), JSON.stringify(blague.replies));
 check('une autre commande est ignorée', handleCommand(fakeInteraction({ commandName: 'status' })) === false);
 setEnabled(guildId, 'jokes', false);
 const disabled = fakeInteraction({ commandName: 'blague' });
@@ -98,30 +132,37 @@ const editJokesCommand = commands.find((c) => c.name === 'edit_jokes').toJSON();
 check('/edit_jokes réservé à "Gérer le serveur"', editJokesCommand.default_member_permissions === PermissionFlagsBits.ManageGuild.toString());
 
 // addJoke
-const newJoke = 'Que dit une imprimante dans l\'eau ?\nJ\'ai papier.';
-check('addJoke ajoute une blague', addJoke(guildId, newJoke) === 'added');
-check('la blague est dans la liste du serveur', getJokes(guildId).includes(newJoke));
+const isPapier = (joke) => joke.text === 'Que dit une imprimante dans l\'eau ?';
+check('addJoke ajoute une blague avec chute', addJoke(guildId, 'Que dit une imprimante dans l\'eau ?', 'J\'ai papier.') === 'added');
+check('la blague est stockée structurée', getJokes(guildId).find(isPapier)?.punchline === 'J\'ai papier.');
 check('les blagues par défaut sont conservées dans la liste', DEFAULT_JOKES.every((joke) => getJokes(guildId).includes(joke)));
-check('les blagues par défaut ne sont pas modifiées', !DEFAULT_JOKES.includes(newJoke));
-check('les autres serveurs ne sont pas impactés', !getJokes('autre-guild').includes(newJoke));
-check('addJoke refuse un doublon', addJoke(guildId, newJoke) === 'duplicate');
-check('addJoke refuse un doublon à espaces près', addJoke(guildId, `  ${newJoke}  `) === 'duplicate');
-check('addJoke refuse une blague vide', addJoke(guildId, '   \n ') === 'empty');
-const savedJokes = JSON.parse(fs.readFileSync(path.join(DATA_DIR, 'jokes.json'), 'utf8'));
-check('la liste est persistée dans data/jokes.json', savedJokes[guildId]?.includes(newJoke));
+check('les blagues par défaut ne sont pas modifiées', !DEFAULT_JOKES.some(isPapier));
+check('les autres serveurs ne sont pas impactés', !getJokes('autre-guild').some(isPapier));
+check('addJoke refuse un doublon', addJoke(guildId, 'Que dit une imprimante dans l\'eau ?', 'J\'ai papier.') === 'duplicate');
+check('addJoke refuse un doublon à espaces près', addJoke(guildId, '  Que dit une imprimante dans l\'eau ? ', ' J\'ai papier. ') === 'duplicate');
+check('même texte, autre chute : pas un doublon', addJoke(guildId, 'Que dit une imprimante dans l\'eau ?', 'Glou glou.') === 'added');
+check('addJoke sans chute : pas de champ punchline', addJoke(guildId, 'Une blague sans chute') === 'added'
+  && !('punchline' in getJokes(guildId).find((joke) => joke.text === 'Une blague sans chute')));
+check('addJoke : chute vide ignorée', addJoke(guildId, 'Encore une', '   ') === 'added'
+  && !('punchline' in getJokes(guildId).find((joke) => joke.text === 'Encore une')));
+check('addJoke refuse une blague vide', addJoke(guildId, '   \n ', 'chute') === 'empty');
+const savedJokes = JSON.parse(fs.readFileSync(JOKES_FILE, 'utf8'));
+check('la liste est persistée dans data/jokes.json', savedJokes[guildId]?.some(isPapier));
 
 // removeJoke
-const index = getJokes(guildId).indexOf(newJoke);
-check('removeJoke retourne la blague supprimée', removeJoke(guildId, index) === newJoke);
-check('la blague n\'est plus dans la liste', !getJokes(guildId).includes(newJoke));
+const index = getJokes(guildId).findIndex(isPapier);
+check('removeJoke retourne la blague supprimée', removeJoke(guildId, index)?.punchline === 'J\'ai papier.');
+check('la blague n\'est plus dans la liste', !getJokes(guildId).some((joke) => joke.punchline === 'J\'ai papier.'));
 check('removeJoke refuse un index trop grand', removeJoke(guildId, 999) === null);
 check('removeJoke refuse un index négatif', removeJoke(guildId, -1) === null);
 
 // Autocomplétion
 const canards = getJokeChoices(guildId, 'canard');
 check('recherche "canard" trouve la blague des canards', canards.length === 1 && canards[0].name.includes('canards'), JSON.stringify(canards));
-check('la valeur du choix est l\'index de la blague', getJokes(guildId)[Number(canards[0].value)].includes('canards'));
-check('le nom du choix tient sur une ligne', !canards[0].name.includes('\n'));
+check('le nom du choix affiche "texte → chute"', canards[0].name.includes(' → Parce qu\'ils sont dans l\'étang.'), canards[0].name);
+check('la recherche porte aussi sur la chute', getJokeChoices(guildId, 'jonathan').length === 1);
+check('la valeur du choix est l\'index de la blague', getJokes(guildId)[Number(canards[0].value)].text.includes('canards'));
+check('le nom du choix tient sur une ligne', getJokeChoices(guildId, 'anges').every((choice) => !choice.name.includes('\n')));
 check('recherche insensible aux accents et à la casse', getJokeChoices(guildId, 'ELECTRICIEN').length === 1);
 for (let i = 0; i < 30; i++) {
   addJoke('big-guild', `Blague n°${i} ${'x'.repeat(150)}`);
@@ -136,21 +177,29 @@ check('handleAutocomplete ignore les autres commandes', handleAutocomplete(fakeI
 // /edit_jokes ajouter : formulaire
 const add = fakeInteraction({ commandName: 'edit_jokes', subcommand: 'ajouter' });
 check('/edit_jokes ajouter ouvre un formulaire', handleCommand(add) === true && add.modals[0]?.custom_id === 'edit_jokes-ajouter', JSON.stringify(add.modals));
-const submit = fakeInteraction({ customId: 'edit_jokes-ajouter', fields: { texte: 'Nouvelle blague\nsur deux lignes' } });
+check('le formulaire a deux champs (texte obligatoire, chute facultative)',
+  add.modals[0]?.components.map((c) => `${c.component.custom_id}:${c.component.required}`).join(',') === 'texte:true,chute:false',
+  JSON.stringify(add.modals[0]?.components));
+const submit = fakeInteraction({ customId: 'edit_jokes-ajouter', fields: { texte: 'Pourquoi le formulaire ?', chute: 'Pour tester.' } });
 check('envoi du formulaire traité', handleModalSubmit(submit) === true);
-check('envoi du formulaire : blague ajoutée', getJokes(guildId).includes('Nouvelle blague\nsur deux lignes'));
+check('envoi du formulaire : blague ajoutée avec chute', getJokes(guildId).find((joke) => joke.text === 'Pourquoi le formulaire ?')?.punchline === 'Pour tester.');
 check('envoi du formulaire : réponse éphémère', submit.replies[0]?.flags === MessageFlags.Ephemeral && submit.replies[0]?.content === 'Blague ajoutée.', JSON.stringify(submit.replies));
-const resubmit = fakeInteraction({ customId: 'edit_jokes-ajouter', fields: { texte: 'Nouvelle blague\nsur deux lignes' } });
+const noPunchline = fakeInteraction({ customId: 'edit_jokes-ajouter', fields: { texte: 'Formulaire sans champ chute' } });
+handleModalSubmit(noPunchline);
+check('champ chute absent de l\'envoi : blague ajoutée sans chute', noPunchline.replies[0]?.content === 'Blague ajoutée.'
+  && !('punchline' in getJokes(guildId).find((joke) => joke.text === 'Formulaire sans champ chute')), JSON.stringify(noPunchline.replies));
+const resubmit = fakeInteraction({ customId: 'edit_jokes-ajouter', fields: { texte: 'Pourquoi le formulaire ?', chute: 'Pour tester.' } });
 handleModalSubmit(resubmit);
 check('envoi d\'un doublon : message d\'erreur', resubmit.replies[0]?.content === 'Cette blague existe déjà.', JSON.stringify(resubmit.replies));
 check('un autre formulaire est ignoré', handleModalSubmit(fakeInteraction({ customId: 'autre' })) === false);
 
 // /edit_jokes supprimer
-const target = getJokes(guildId).indexOf('Nouvelle blague\nsur deux lignes');
+const target = getJokes(guildId).findIndex((joke) => joke.text === 'Pourquoi le formulaire ?');
 const remove = fakeInteraction({ commandName: 'edit_jokes', subcommand: 'supprimer', options: { blague: String(target) } });
 check('/edit_jokes supprimer est traitée', handleCommand(remove) === true);
-check('/edit_jokes supprimer retire la blague', !getJokes(guildId).includes('Nouvelle blague\nsur deux lignes'));
-check('/edit_jokes supprimer répond en éphémère', remove.replies[0]?.flags === MessageFlags.Ephemeral && remove.replies[0]?.content.startsWith('Blague supprimée'), JSON.stringify(remove.replies));
+check('/edit_jokes supprimer retire la blague', !getJokes(guildId).some((joke) => joke.text === 'Pourquoi le formulaire ?'));
+check('/edit_jokes supprimer répond en éphémère avec la blague', remove.replies[0]?.flags === MessageFlags.Ephemeral
+  && remove.replies[0]?.content === 'Blague supprimée :\n> Pourquoi le formulaire ?\n> ||Pour tester.||', JSON.stringify(remove.replies));
 const count = getJokes(guildId).length;
 const manual = fakeInteraction({ commandName: 'edit_jokes', subcommand: 'supprimer', options: { blague: 'canards' } });
 handleCommand(manual);

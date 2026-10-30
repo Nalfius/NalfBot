@@ -1,6 +1,6 @@
 /**
  * Module de blagues
- * Répond à la slash command /blague avec une blague aléatoire
+ * Répond à la slash command /blague avec une blague aléatoire (chute éventuelle en spoiler)
  * Les admins gèrent la liste de leur serveur avec /edit_jokes ajouter et /edit_jokes supprimer
  */
 
@@ -19,6 +19,53 @@ const {
 const { isEnabled } = require('./configHandler.js');
 
 /**
+ * Une blague : un texte (souvent une question) et une chute facultative, affichée en spoiler
+ * @typedef {{ text: string, punchline?: string }} Joke
+ */
+
+/**
+ * Identifiants du formulaire d'ajout de blague
+ */
+const ADD_MODAL_ID = 'edit_jokes-ajouter';
+const TEXT_INPUT_ID = 'texte';
+const PUNCHLINE_INPUT_ID = 'chute';
+
+/**
+ * Limites Discord : 2000 caractères par message (texte + chute + spoiler), 100 par choix d'autocomplétion, 25 choix
+ */
+const MAX_TEXT_LENGTH = 1500;
+const MAX_PUNCHLINE_LENGTH = 400;
+const MAX_CHOICE_LENGTH = 100;
+const MAX_CHOICES = 25;
+
+/**
+ * Convertit une ancienne blague (simple texte) en blague structurée
+ * Heuristique : si la première ligne finit par "?" et qu'il y a une suite, la suite est la chute
+ * @param {string|Joke} joke - Blague au format texte ou déjà structurée
+ * @returns {Joke}
+ */
+function toJoke(joke) {
+  if (typeof joke !== 'string') {
+    return joke;
+  }
+  const [firstLine, ...rest] = joke.split('\n');
+  const punchline = rest.join('\n').trim();
+  if (firstLine.trim().endsWith('?') && punchline) {
+    return { text: firstLine.trim(), punchline };
+  }
+  return { text: joke };
+}
+
+/**
+ * Met en forme une blague pour Discord : la chute est masquée en spoiler (||chute||)
+ * @param {Joke} joke
+ * @returns {string}
+ */
+function formatJoke(joke) {
+  return joke.punchline ? `${joke.text}\n||${joke.punchline}||` : joke.text;
+}
+
+/**
  * Blagues par défaut, utilisées par un serveur tant que ses admins n'ont pas modifié sa liste
  */
 const DEFAULT_JOKES = Object.freeze(require('./defaultJokes.json'));
@@ -34,22 +81,9 @@ const JOKES_FILE = path.join(__dirname, '..', 'data', 'jokes.json');
 const STATE_FILE = path.join(__dirname, '..', 'data', 'jokes-state.json');
 
 /**
- * Identifiants du formulaire d'ajout de blague
- */
-const ADD_MODAL_ID = 'edit_jokes-ajouter';
-const ADD_INPUT_ID = 'texte';
-
-/**
- * Limites Discord : 2000 caractères par message, 100 par choix d'autocomplétion, 25 choix maximum
- */
-const MAX_JOKE_LENGTH = 2000;
-const MAX_CHOICE_LENGTH = 100;
-const MAX_CHOICES = 25;
-
-/**
- * Listes de blagues modifiées par serveur (guildId -> string[])
+ * Listes de blagues modifiées par serveur (guildId -> Joke[])
  * Un serveur absent utilise DEFAULT_JOKES
- * @type {Object.<string, string[]>}
+ * @type {Object.<string, Joke[]>}
  */
 let jokesByGuild = {};
 
@@ -91,7 +125,9 @@ function writeJson(file, data) {
 
 function loadState() {
   lastJokeIndexByGuild = readJson(STATE_FILE);
-  jokesByGuild = readJson(JOKES_FILE);
+  // Les listes enregistrées avant le format structuré contiennent des textes : conversion au chargement
+  jokesByGuild = Object.fromEntries(Object.entries(readJson(JOKES_FILE))
+    .map(([guildId, jokes]) => [guildId, jokes.map(toJoke)]));
 }
 
 function saveState() {
@@ -108,7 +144,7 @@ loadState();
 /**
  * Retourne la liste de blagues d'un serveur
  * @param {string|null} guildId - Identifiant du serveur
- * @returns {string[]}
+ * @returns {Joke[]}
  */
 function getJokes(guildId) {
   return jokesByGuild[guildId] ?? DEFAULT_JOKES;
@@ -117,16 +153,20 @@ function getJokes(guildId) {
 /**
  * Ajoute une blague à la liste d'un serveur
  * @param {string} guildId - Identifiant du serveur
- * @param {string} text - La blague
+ * @param {string} text - Le texte (ou la question)
+ * @param {string} [punchline] - La chute, facultative
  * @returns {'added'|'duplicate'|'empty'} - Résultat de l'ajout
  */
-function addJoke(guildId, text) {
-  const joke = text.trim();
-  if (!joke) {
+function addJoke(guildId, text, punchline = '') {
+  const joke = { text: text.trim() };
+  if (punchline.trim()) {
+    joke.punchline = punchline.trim();
+  }
+  if (!joke.text) {
     return 'empty';
   }
   const jokes = getJokes(guildId);
-  if (jokes.includes(joke)) {
+  if (jokes.some((existing) => formatJoke(existing) === formatJoke(joke))) {
     return 'duplicate';
   }
   jokesByGuild[guildId] = [...jokes, joke];
@@ -138,7 +178,7 @@ function addJoke(guildId, text) {
  * Supprime une blague de la liste d'un serveur
  * @param {string} guildId - Identifiant du serveur
  * @param {number} index - Position de la blague dans la liste
- * @returns {string|null} - La blague supprimée, ou null si l'index est invalide
+ * @returns {Joke|null} - La blague supprimée, ou null si l'index est invalide
  */
 function removeJoke(guildId, index) {
   const jokes = getJokes(guildId);
@@ -157,7 +197,7 @@ function removeJoke(guildId, index) {
 /**
  * Retourne une blague aléatoire, en évitant la répétition consécutive par serveur
  * @param {string|null} guildId - Identifiant du serveur (optionnel)
- * @returns {string|null} - Une blague aléatoire ou null
+ * @returns {Joke|null} - Une blague aléatoire ou null
  */
 function getRandomJoke(guildId = null) {
   const jokes = getJokes(guildId);
@@ -214,7 +254,7 @@ function normalize(text) {
 
 /**
  * Construit les choix d'autocomplétion de /edit_jokes supprimer
- * Valeur = index de la blague, nom = blague sur une ligne, tronquée
+ * Valeur = index de la blague, nom = "texte → chute" sur une ligne, tronqué
  * @param {string|null} guildId - Identifiant du serveur
  * @param {string} search - Texte saisi par l'utilisateur
  * @returns {{name: string, value: string}[]}
@@ -222,11 +262,14 @@ function normalize(text) {
 function getJokeChoices(guildId, search) {
   const query = normalize(search);
   return getJokes(guildId)
-    .map((joke, index) => ({ joke, index }))
-    .filter(({ joke }) => normalize(joke).includes(query))
+    .map((joke, index) => ({
+      label: joke.punchline ? `${joke.text} → ${joke.punchline}` : joke.text,
+      index,
+    }))
+    .filter(({ label }) => normalize(label).includes(query))
     .slice(0, MAX_CHOICES)
-    .map(({ joke, index }) => {
-      const oneLine = joke.replace(/\s+/g, ' ');
+    .map(({ label, index }) => {
+      const oneLine = label.replace(/\s+/g, ' ');
       const name = oneLine.length > MAX_CHOICE_LENGTH ? oneLine.slice(0, MAX_CHOICE_LENGTH - 1) + '…' : oneLine;
       return { name, value: String(index) };
     });
@@ -267,14 +310,23 @@ function buildAddModal() {
   return new ModalBuilder()
     .setCustomId(ADD_MODAL_ID)
     .setTitle('Nouvelle blague')
-    .addLabelComponents(new LabelBuilder()
-      .setLabel('Blague')
-      .setDescription('Retours à la ligne autorisés (question, puis réponse)')
-      .setTextInputComponent(new TextInputBuilder()
-        .setCustomId(ADD_INPUT_ID)
-        .setStyle(TextInputStyle.Paragraph)
-        .setMaxLength(MAX_JOKE_LENGTH)
-        .setRequired(true)));
+    .addLabelComponents(
+      new LabelBuilder()
+        .setLabel('Blague / question')
+        .setTextInputComponent(new TextInputBuilder()
+          .setCustomId(TEXT_INPUT_ID)
+          .setStyle(TextInputStyle.Paragraph)
+          .setMaxLength(MAX_TEXT_LENGTH)
+          .setRequired(true)),
+      new LabelBuilder()
+        .setLabel('Chute (facultative)')
+        .setDescription('Affichée en spoiler, à révéler d\'un clic')
+        .setTextInputComponent(new TextInputBuilder()
+          .setCustomId(PUNCHLINE_INPUT_ID)
+          .setStyle(TextInputStyle.Paragraph)
+          .setMaxLength(MAX_PUNCHLINE_LENGTH)
+          .setRequired(false)),
+    );
 }
 
 /**
@@ -294,7 +346,7 @@ function handleCommand(interaction) {
       interaction.reply({ content: 'Aucune blague disponible.', flags: MessageFlags.Ephemeral });
       return true;
     }
-    interaction.reply(joke);
+    interaction.reply(formatJoke(joke));
     return true;
   }
 
@@ -309,7 +361,7 @@ function handleCommand(interaction) {
     const removed = /^\d+$/.test(value) ? removeJoke(interaction.guildId, Number(value)) : null;
     interaction.reply({
       content: removed
-        ? `Blague supprimée :\n> ${removed.replace(/\n/g, '\n> ')}`
+        ? `Blague supprimée :\n> ${formatJoke(removed).replace(/\n/g, '\n> ')}`
         : 'Blague introuvable : choisis-la dans la liste proposée.',
       flags: MessageFlags.Ephemeral,
     });
@@ -346,7 +398,14 @@ function handleModalSubmit(interaction) {
     duplicate: 'Cette blague existe déjà.',
     empty: 'La blague est vide.',
   };
-  const result = addJoke(interaction.guildId, interaction.fields.getTextInputValue(ADD_INPUT_ID));
+  // getTextInputValue lève une erreur si le champ est absent de l'envoi : la chute étant facultative, on s'en protège
+  let punchline = '';
+  try {
+    punchline = interaction.fields.getTextInputValue(PUNCHLINE_INPUT_ID) ?? '';
+  } catch {
+    punchline = '';
+  }
+  const result = addJoke(interaction.guildId, interaction.fields.getTextInputValue(TEXT_INPUT_ID), punchline);
   interaction.reply({ content: messages[result], flags: MessageFlags.Ephemeral });
   return true;
 }
@@ -361,5 +420,7 @@ module.exports = {
   removeJoke,
   getRandomJoke,
   getJokeChoices,
+  formatJoke,
+  toJoke,
   DEFAULT_JOKES,
 };

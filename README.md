@@ -9,7 +9,7 @@ Chaque module s'active ou se désactive par serveur avec `/module` (tous activé
 | Module | Déclencheur | Réponse |
 |---|---|---|
 | `feur` | un message contenant « quoi » | `feur` (1 fois sur 20 : `coubeh`), avec quelques règles spéciales : `pourquoi` → `pour feur`, `tu fais quoi` → `je fais feur`… |
-| `jokes` | `/blague` | une blague aléatoire, jamais deux fois la même d'affilée sur un serveur. Chaque serveur a sa propre liste, gérée par ses admins avec `/edit_jokes` |
+| `jokes` | `/blague` | une blague aléatoire (chute éventuelle en spoiler, à révéler d'un clic), jamais deux fois la même d'affilée sur un serveur. Chaque serveur a sa propre liste, gérée par ses admins avec `/edit_jokes` |
 | `di` | un mot de 7 lettres ou plus commençant par « di » | la suite du mot : `divague` → `vague` |
 | `hein` | le mot « hein » | `deux` |
 
@@ -20,7 +20,7 @@ Le bot répond au plus une fois par message (priorité : feur, di, hein). La cas
 | Commande | Accès | Description |
 |---|---|---|
 | `/blague` | tout le monde | raconte une blague |
-| `/edit_jokes ajouter` | admins | ouvre un formulaire pour ajouter une blague (multiligne) à la liste du serveur |
+| `/edit_jokes ajouter` | admins | ouvre un formulaire pour ajouter une blague à la liste du serveur : texte ou question (obligatoire) et chute (facultative, affichée en spoiler) |
 | `/edit_jokes supprimer blague` | admins | supprime une blague, choisie par autocomplétion (tape pour chercher) |
 | `/module nom etat` | admins (permission « Gérer le serveur ») | active ou désactive un module sur le serveur |
 | `/status` | tout le monde | état des modules sur le serveur (réponse visible par soi seul) |
@@ -95,7 +95,7 @@ src/
   configHandler.js    config des modules par serveur, /module et /status
   feurHandler.js      module feur
   jokesHandler.js     module jokes, /blague et /edit_jokes
-  defaultJokes.json   blagues par défaut d'un serveur
+  defaultJokes.json   blagues par défaut d'un serveur (`{ text, punchline? }`)
   diHandler.js        module di
   heinHandler.js      module hein
   helpHandler.js      /help

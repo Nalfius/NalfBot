@@ -1,17 +1,61 @@
 [
-  "Pourquoi les plongeurs plongent-ils toujours en arrière et jamais en avant ?\nParce que sinon ils tombent dans le bateau.",
-  "Que fait mozart dans sa tombe ?\nIl décompose",
-  "Pourquoi les canards sont toujours à l'heure ?\nParce qu'ils sont dans l'étang.",
-  "Qu'est-ce qui est jaune et qui attend ?\nJonathan.",
-  "Qu'est-ce qui fait 999 fois tic et 1 fois toc ?\nUn mille-pattes avec une jambe de bois.",
-  "Comment appelle-t-on un bébé éléphant prématuré ?\nUn éléphanteau.",
-  "Que font deux guitares qui dépriment ?\nUn coup de blues.",
-  "C'est l'histoire d'un ptit pois qui fait du sport, et il se dit : \"il me faudrait des petits pois\"",
-  "Deux anges font la causette :\n\"Quel temps fait-il demain ?\"\n\"Nuageux\"\n\"Parfait on pourra s'assoir\"",
-  "Quel est le jeu préféré des supers-héros ?\nLe cap ou pas cap.",
-  "Quel est le comble pour un électricien ?\nAvoir un coup de foudre",
-  "Pourquoi Hulk a un beau jardin ?\nParce qu'il a la main verte.",
-  "Où l'homme invisible part-il en vacances ?\nChez ces transparents.",
-  "Quelle est l'expression préférée des vampires ?\nBon sang",
-  "Quel est le comble pour un fantôme ?\nEtre dans de beaux draps."
+  {
+    "text": "Pourquoi les plongeurs plongent-ils toujours en arrière et jamais en avant ?",
+    "punchline": "Parce que sinon ils tombent dans le bateau."
+  },
+  {
+    "text": "Que fait mozart dans sa tombe ?",
+    "punchline": "Il décompose"
+  },
+  {
+    "text": "Pourquoi les canards sont toujours à l'heure ?",
+    "punchline": "Parce qu'ils sont dans l'étang."
+  },
+  {
+    "text": "Qu'est-ce qui est jaune et qui attend ?",
+    "punchline": "Jonathan."
+  },
+  {
+    "text": "Qu'est-ce qui fait 999 fois tic et 1 fois toc ?",
+    "punchline": "Un mille-pattes avec une jambe de bois."
+  },
+  {
+    "text": "Comment appelle-t-on un bébé éléphant prématuré ?",
+    "punchline": "Un éléphanteau."
+  },
+  {
+    "text": "Que font deux guitares qui dépriment ?",
+    "punchline": "Un coup de blues."
+  },
+  {
+    "text": "C'est l'histoire d'un ptit pois qui fait du sport, et il se dit : \"il me faudrait des petits pois\""
+  },
+  {
+    "text": "Deux anges font la causette :\n\"Quel temps fait-il demain ?\"\n\"Nuageux\"",
+    "punchline": "\"Parfait on pourra s'assoir\""
+  },
+  {
+    "text": "Quel est le jeu préféré des supers-héros ?",
+    "punchline": "Le cap ou pas cap."
+  },
+  {
+    "text": "Quel est le comble pour un électricien ?",
+    "punchline": "Avoir un coup de foudre"
+  },
+  {
+    "text": "Pourquoi Hulk a un beau jardin ?",
+    "punchline": "Parce qu'il a la main verte."
+  },
+  {
+    "text": "Où l'homme invisible part-il en vacances ?",
+    "punchline": "Chez ces transparents."
+  },
+  {
+    "text": "Quelle est l'expression préférée des vampires ?",
+    "punchline": "Bon sang"
+  },
+  {
+    "text": "Quel est le comble pour un fantôme ?",
+    "punchline": "Etre dans de beaux draps."
+  }
 ]
